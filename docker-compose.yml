@@ -1,0 +1,6 @@
+tomatotree:
+  ports:
+    - "81:80"
+  build: .
+  volumes:
+      - ./app:/app

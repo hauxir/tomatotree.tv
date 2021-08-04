@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tomatotree.tv</title>
+  <meta name="description" content="Find your next TV Series!"/>
+  <link rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAdVJREFUOE+d089Lk3EcB/D35/s8kwUjcywJoRy6LuU20JtGPewxvCQiuKBLF/sHgpBAUIIOehADL0E3L4KBh2pgteEhKYgu04GH7UkoLaIxyfJHe9zzDh9yTI1w+56+fL6fz+v7g89XUDFGFwx9dzMwsKc8yYnemfz+0v1n8djvXbybvPl0pzL3YC5Hg3fn4/66It7Sgz4WnS6lpItQaRLfNbU1P3YjsVFZcwgg4pp1uXB14ZbviRWua3IEW4rwNn7aK15YKaYupu2XZza355qXF8tIGbAi102Qj/NNWih9xYsdn6BwToNuA52JbQRX7IONf4EYaV1OPgJAF8hGu3sU8dxR8Pz0K9TnHTf5S1DH2fUSfgQUAl9Lh25LcCK0lLonHzo6PA12QxZA878e6T8xlugYYoXNboi8rrLYTScxK7mwOSQi47UAANYlFzXHhTJUC0DQFitqjoDyoBYAwIbk2mL9otRcTQCRlMwlw3dK19cA1FeLiMhttw8+RmLDhHpYHcD3LUv+ThegYehWQX8hQM9JEAFWHUddC2VefS638mrQ8JZOa1MCGQRw7JOVYSIh5GBLJvVtP3YsMRuJtetQd0gYFJz/W7gmwBsKplvTycXKU/4BYQWiVIrSYIkAAAAASUVORK5CYII="/>
+
+  <script src="//code.jquery.com/jquery-3.6.0.slim.min.js"></script>
+  <script src="//cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
+  <script src="//cdn.datatables.net/1.10.25/js/dataTables.bulma.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <link href="//fonts.googleapis.com/css2?family=Fascinate+Inline&display=swap" rel="stylesheet">
+  <link href="//cdnjs.cloudflare.com/ajax/libs/bulma/0.9.1/css/bulma.min.css" rel="stylesheet" />
+  <link href="//cdn.datatables.net/1.10.25/css/dataTables.bulma.min.css" rel="stylesheet" />
+  <link href="//cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<style>
+  body,
+  html {
+    background-color: #cd2604;
+    height: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  
+  h1 {
+    color: #fff;
+    font-weight: 400;
+    margin: auto;
+    font-size: 42px;
+    font-family: Fascinate Inline;
+    margin-bottom: -10px;
+  }
+  
+  h2 {
+    color: #fff;
+    margin: auto;
+    font-size: 16px;
+    margin-bottom: 20px;
+    font-weight: 400;
+  }
+  
+  form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .root {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    flex: 1;
+    margin: 0 auto;
+    max-width: 800px;
+  }
+  
+  .form-row {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+  }
+  
+  .form-row > * {
+    position: relative;
+  }
+  
+  .select-wrapper {
+    flex: 1;
+    display: flex;
+    margin: 10px 0px;
+    padding: 0px 5px;
+  }
+  
+  .select2-container {
+    flex: 1;
+  }
+  
+  .select2-selection {
+    height: 40px;
+    display: flex !important;
+    align-items: center;
+  }
+  
+  .results {
+    flex: 1;
+    background-color: white;
+  }
+  
+  #logo {
+    background-color: #fa320a;
+    padding: 10px;
+    border-radius: 10px;
+    margin: auto;
+    margin-bottom: 10px;
+  }
+  
+  table.dataTable {
+    margin-top: 0px !important;
+    width: 100% !important;
+  }
+  
+  th {
+    top: 0;
+    color: black;
+    background-color: lightgray;
+    text-align: left !important;
+    padding: 5px;
+  }
+  
+  td {
+    min-width: 50px;
+  }
+  
+  .range-wrap {
+    position: relative;
+    margin: 0 auto 3rem;
+    display: flex;
+    flex-direction: column;
+    color: #555;
+    font-weight: 700;
+    padding: 5px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 5px;
+    text-align: center;
+  }
+  
+  .range {
+    width: 100%;
+  }
+  
+  .rangeBubble {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: white;
+    padding: 4px 12px;
+    position: absolute;
+    border-radius: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -30px;
+    font-size: 12px;
+  }
+  
+  .rangeBubble::after {
+    content: "";
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background-color: rgba(0, 0, 0, 0.2);
+    top: -1px;
+    left: 50%;
+  }
+  
+  .loader {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    pointer-events: none;
+    width: 2.5em;
+    height: 2.5em;
+    border: 0.4em solid transparent;
+    border-color: rgba(0, 0, 0, 0);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: loadingspin 1s linear infinite;
+  }
+  
+  @keyframes loadingspin {
+    100% {
+      transform: rotate(360deg)
+    }
+  }
+
+  @media screen and (max-width: 640px) {
+    h1 {
+      font-size: 36px;
+    }
+    .form-row {
+      flex-direction: column;
+    }
+    .form-row>* {
+      width: 100%;
+    }
+  }
+</style>
+
+  </head>
+
+  <body>
+  <div class="loader"></div>
+  <div class="container" style="display:none;">
+    <div class="root">
+      <h1>tomatotree.tv</h1>
+      <h2>Find your next TV Series!</h2>
+      <form>
+        <div class="form-row">
+          <div class="range-wrap">
+            <label for="minYear">Min year</label>
+            <input type="range" id="minYear" class="slider has-output-tooltip is-fullwidth" />
+            <output class="rangeBubble"></output>
+          </div>
+          <div class="range-wrap">
+            <label for="maxYear">Max year</label>
+            <input type="range" id="maxYear" class="slider has-output-tooltip is-fullwidth" />
+            <output class="rangeBubble"></output>
+          </div>
+          <div class="range-wrap">
+            <label for="tomatometer_score"> Min &#127813;
+            </label>
+            <input type="range" value="70" id="tomatometer_score" class="slider has-output-tooltip" min="0" max="100" />
+            <output class="rangeBubble"></output>
+          </div>
+          <div class="range-wrap">
+            <label for="audience_score"> Min &#127871;
+            </label>
+            <input type="range" value="70" id="audience_score" class="slider has-output-tooltip" min="0" max="100" />
+            <output class="rangeBubble"></output>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="select-wrapper">
+            <select placeholder="Genre" multiple id="genre"></select>
+          </div>
+          <div class="select-wrapper">
+            <select multiple id="network"></select>
+          </div>
+        </div>
+      </form>
+      <div class="results">
+        <div class="table-container">
+          <table class="table is-striped is-hoverable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Genre</th>
+                <th>Network</th>
+                <th>Year</th>
+                <th>&#127813;</th>
+                <th>&#127871;</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    </div>
+  
+    <script>
+    
+    $(document).ready(function() {
+
+      const defaultGenres = ["Drama", "Comedy"];
+    
+      const data = {{data | safe}};
+      
+      const firstYear = Math.min(...data.map(item => item.year).filter(y => y > 0));
+      const lastYear = Math.max(...data.map(item => item.year).filter(y => y > 0));
+      
+      $('#minYear, #maxYear').prop('min', firstYear);
+      $('#minYear, #maxYear').prop('max', lastYear);
+      $('#minYear').val(lastYear - 2);
+      $('#maxYear').val(lastYear);
+      
+      [...new Set(data.map(item => item.genre))].sort().forEach(genre => {
+        const option = new Option(genre, genre);
+        if (defaultGenres.indexOf(genre) !== -1) {
+          option.selected = true;
+        }
+        $("#genre").append(option);
+      });
+      
+      $('#genre').select2({
+        placeholder: "Genre"
+      });
+      
+      [...new Set(data.map(item => item.network))].sort().forEach(network => {
+        $("#network").append(new Option(network, network));
+      });
+      
+      $('#network').select2({
+        placeholder: "Network"
+      });
+      
+      const datatable = $("table").DataTable({
+        paging: false,
+        searching: false,
+        info: false,
+        data: [],
+        columns: [{
+            data: 'name',
+            render: (name, _type, row) => `<a rel="noopener" href="${row.url}" target="_blank">${name}</a>`
+          }, {
+            data: 'genre'
+          }, {
+            data: 'network'
+          }, {
+            data: 'year'
+          }, {
+            data: 'tomatometer_score'
+          }, {
+            data: 'audience_score'
+        }]
+      });
+      
+      function render() {
+        const minYear = $("#minYear").val();
+        const maxYear = $("#maxYear").val();
+        if (maxYear !== $("#minYear").prop("max")) {
+          $('#minYear').prop('max', maxYear);
+          $('#minYear').change();
+        }
+        if (minYear !== $("#maxYear").prop("min")) {
+          $('#maxYear').prop('min', minYear);
+          $('#maxYear').change();
+        }
+        const minTomatoMeter = $("#tomatometer_score").val();
+        const minAudience = $("#audience_score").val();
+        const genres = $("#genre").val();
+        const networks = $("#network").val();
+        const results = data.filter(r => {
+          const matchesGenres = genres.length > 0 ? genres.indexOf(r.genre) !== -1 : true;
+          const matchesNetworks = networks.length > 0 ? networks.indexOf(r.network) !== -1 : true;
+          return (
+            (minYear === firstYear || r.year >= minYear) &&
+            (maxYear === lastYear || r.year <= maxYear) &&
+            r.tomatometer_score >= minTomatoMeter &&
+            r.audience_score >= minAudience &&
+            matchesGenres &&
+            matchesNetworks
+          )
+        });
+        datatable.clear();
+        datatable.rows.add(results);
+        datatable.draw();
+      };
+      
+      $(".range-wrap").each(function() {
+        function setrangeBubble(range, rangeBubble) {
+          const val = range.value;
+          const min = range.min ? range.min : 0;
+          const max = range.max ? range.max : 100;
+          const newVal = Number(((val - min) * 100) / (max - min));
+          rangeBubble.innerHTML = val;
+          rangeBubble.style.left = `calc(${newVal}% + (${8 - newVal * 0.15}px))`;
+        }
+      
+        const range = $(this).find("[type='range']")[0];
+        const rangeBubble = $(this).find(".rangeBubble")[0];
+        $(range).on("change input", () => {
+          setrangeBubble(range, rangeBubble);
+        });
+        setrangeBubble(range, rangeBubble);
+      });
+      
+      $("#minYear, #maxYear, #tomatometer_score, #audience_score, #genre, #network").on("change", render);
+      
+      render();
+      
+      datatable.order(
+      [
+        [3, "desc"],
+        [5, "desc"]
+      ]
+      );
+      datatable.draw();
+      
+      $(".container").show();
+      $(".loader").remove();
+    
+    })
+    
+    </script>
+  </body>
+</html>
