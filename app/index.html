@@ -192,6 +192,83 @@
       display: none;
     }
   }
+  
+  @media (prefers-color-scheme: dark) {
+      body, html {
+          background-color: #000;
+      }
+
+      a{
+          color: #4e92ff !important;
+      }
+
+      .results {
+          background-color: rgb(32, 32, 32);
+      }
+
+      th {
+          color: rgb(218, 218, 218) !important;
+          background-color: rgb(51, 51, 51);
+      }
+
+      .range-wrap {
+          color: rgb(190, 190, 190);
+          background-color: rgba(70, 70, 70, 0.9);
+      }
+
+      .rangeBubble {
+          background-color: rgba(163, 163, 163, 0.2);
+          color: rgb(218, 218, 218);
+      }
+
+      .rangeBubble::after {
+          background-color: rgba(218, 218, 218, 0.2);
+      }
+
+      .loader {
+          border-color: rgba(218, 218, 218, 0);
+          border-top-color: rgb(0, 0, 0);
+      }
+
+      .table{
+          color: rgb(218, 218, 218);
+          background-color: rgb(32, 32, 32);
+      }
+
+      .table .even{
+          background-color: rgb(71, 71, 71) !important;
+      }
+
+      .select2-selection--multiple{
+          color: rgb(218, 218, 218) !important;
+          background-color: rgb(71, 71, 71) !important;
+      }
+
+      .select2-selection--multiple textarea{
+          color: rgb(218, 218, 218) !important;
+      }
+
+      .select2-selection__choice{
+          background-color: #2b2b2b !important;
+      }
+
+      tr:hover {
+          background-color: #000 !important;
+      }
+
+      .table td, .table th{
+          border-color: #656565;
+      }
+
+      .select2-dropdown{
+          color: rgb(218, 218, 218) !important;
+          background-color: rgb(71, 71, 71) !important;
+      }
+
+      .select2-results__option--selected{
+          background-color: #000 !important;
+      }
+  }
 </style>
 
   </head>
