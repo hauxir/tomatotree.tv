@@ -330,33 +330,50 @@
     </div>
   
     <script>
+    /**
+     * Remember the user's filters when they come back, otherwise return some
+     * defaults
+     */
+    function loadInitialFilters(lastYear) {
+      const filtersJson = localStorage.getItem('initialFilters');
+      if (!filtersJson) {
+        return {
+          minYear: lastYear - 2,
+          maxYear: lastYear,
+          genres: ["Drama", "Comedy"],
+          networks: [],
+        };
+      }
+
+      return JSON.parse(filtersJson)
+    }
+    
     
     $(document).ready(function() {
 
-      const defaultGenres = ["Drama", "Comedy"];
-    
       const data = {{data | safe}};
       
       const firstYear = Math.min(...data.map(item => item.year).filter(y => y > 0));
       const lastYear = Math.max(...data.map(item => item.year).filter(y => y > 0));
+      const initialFilters = loadInitialFilters(lastYear);
       
       $('#minYear, #maxYear').prop('min', firstYear);
       $('#minYear, #maxYear').prop('max', lastYear);
-      $('#minYear').val(lastYear - 2);
-      $('#maxYear').val(lastYear);
+      $('#minYear').val(initialFilters.minYear);
+      $('#maxYear').val(initialFilters.maxYear);
 
       const genres = [];
       
       [...new Set(data.map(item => item.genre))].sort().forEach(genre => {
-	if(!genre) return;
-	genre.replace(" & ", ",").split(",").forEach(genre => {
+        if(!genre) return;
+        genre.replace(" & ", ",").split(",").forEach(genre => {
           genres.push(genre.trim());
-	})
+        })
       });
 
       [...new Set(genres)].sort().forEach(genre => {
           const option = new Option(genre, genre);
-          if (defaultGenres.indexOf(genre) !== -1) {
+          if (initialFilters.genres.indexOf(genre) !== -1) {
             option.selected = true;
           }
           $("#genre").append(option);
@@ -367,8 +384,12 @@
       });
       
       [...new Set(data.map(item => item.network))].sort().forEach(network => {
-	if(!network) return;
-        $("#network").append(new Option(network, network));
+        if(!network) return;
+        const option = new Option(network, network);
+        if (initialFilters.networks.indexOf(network) !== -1) {
+          option.selected = true;
+        }
+        $("#network").append(option);
       });
       
       $('#network').select2({
@@ -411,6 +432,19 @@
         const minAudience = $("#audience_score").val();
         const genres = $("#genre").val();
         const networks = $("#network").val();
+
+        localStorage.setItem(
+          'initialFilters',
+          JSON.stringify({
+            minYear,
+            maxYear,
+            minTomatoMeter,
+            minAudience,
+            genres,
+            networks
+          })
+        )
+
         const results = data.filter(r => {
           const matchesGenres = genres.length > 0 ? genres.find(genre => r.genre && r.genre.indexOf(genre) !== -1) !== undefined : true;
           const matchesNetworks = networks.length > 0 ? networks.find(network=> r.network && r.network.indexOf(network) !== -1) !== undefined : true;
