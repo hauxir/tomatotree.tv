@@ -195,7 +195,7 @@
     
   @media (prefers-color-scheme: dark) {
     body, html {
-      background-color: #000;
+      background-color: #3b0b01;
     }
 
     a{
@@ -223,11 +223,6 @@
 
     .rangeBubble::after {
       background-color: rgba(218, 218, 218, 0.2);
-    }
-
-    .loader {
-      border-color: rgba(218, 218, 218, 0);
-      border-top-color: rgb(0, 0, 0);
     }
 
     .table{
@@ -349,13 +344,22 @@
       $('#minYear, #maxYear').prop('max', lastYear);
       $('#minYear').val(lastYear - 2);
       $('#maxYear').val(lastYear);
+
+      const genres = [];
       
       [...new Set(data.map(item => item.genre))].sort().forEach(genre => {
-        const option = new Option(genre, genre);
-        if (defaultGenres.indexOf(genre) !== -1) {
-          option.selected = true;
-        }
-        $("#genre").append(option);
+	if(!genre) return;
+	genre.replace(" & ", ",").split(",").forEach(genre => {
+          genres.push(genre.trim());
+	})
+      });
+
+      [...new Set(genres)].sort().forEach(genre => {
+          const option = new Option(genre, genre);
+          if (defaultGenres.indexOf(genre) !== -1) {
+            option.selected = true;
+          }
+          $("#genre").append(option);
       });
       
       $('#genre').select2({
@@ -363,6 +367,7 @@
       });
       
       [...new Set(data.map(item => item.network))].sort().forEach(network => {
+	if(!network) return;
         $("#network").append(new Option(network, network));
       });
       
@@ -407,8 +412,8 @@
         const genres = $("#genre").val();
         const networks = $("#network").val();
         const results = data.filter(r => {
-          const matchesGenres = genres.length > 0 ? genres.indexOf(r.genre) !== -1 : true;
-          const matchesNetworks = networks.length > 0 ? networks.indexOf(r.network) !== -1 : true;
+          const matchesGenres = genres.length > 0 ? genres.find(genre => r.genre && r.genre.indexOf(genre) !== -1) !== undefined : true;
+          const matchesNetworks = networks.length > 0 ? networks.find(network=> r.network && r.network.indexOf(network) !== -1) !== undefined : true;
           return (
             (minYear === firstYear || r.year >= minYear) &&
             (maxYear === lastYear || r.year <= maxYear) &&

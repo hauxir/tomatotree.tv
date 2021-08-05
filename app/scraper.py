@@ -1,3 +1,4 @@
+import datetime
 import sys
 import json
 import sqlite3
@@ -12,6 +13,9 @@ from tqdm import tqdm
 from yarl import URL
 
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
+
+CURRENT_YEAR = datetime.date.today().year
+LAST_YEAR = CURRENT_YEAR - 1
 
 urlmap_db = sqlite3.connect("urlmap.db")
 urlmap_cursor = urlmap_db.cursor()
@@ -156,6 +160,18 @@ def generate_urlmap():
 
 def extract_data_from_urls():
     print("Scraping data from from Rotten Tomatoes...")
+
+    def url_exists(url):
+        rt_cursor.execute(
+            f"""select count(*) from series where url='{url.replace("'","''")}';"""
+        )
+        return rt_cursor.fetchall()[0][0] > 0
+
+    def delete_last_2_years_of_series():
+        rt_cursor.execute(
+            f"delete from series where year>={LAST_YEAR};"
+        )
+
     urls = []
     urlmap_cursor.execute(f"select url from urlmap")
     results = urlmap_cursor.fetchall()
@@ -164,12 +180,6 @@ def extract_data_from_urls():
     urls = list(dict.fromkeys(urls))
     urls = [url for url in urls if not url_exists(url)]
     pbar = tqdm(urls)
-
-    def url_exists(url):
-        rt_cursor.execute(
-            f"""select count(*) from series where url='{url.replace("'","''")}';"""
-        )
-        return rt_cursor.fetchall()[0][0] > 0
 
     def extract_rt_data(html):
         soup = BeautifulSoup(html, "html.parser")
@@ -290,6 +300,7 @@ def extract_data_from_urls():
                 await asyncio.sleep(delay_per_request)
             await asyncio.gather(*tasks)
 
+    delete_last_2_years_of_series() # So their data gets updated
     asyncio.run(scrape_urls())
 
 
