@@ -53,11 +53,33 @@ try:
             network TEXT,
             year INT,
             tomatometer_score INT,
-            audience_score INT
+            audience_score INT,
+            no_seasons INT
         )
     """
     )
 except sqlite3.OperationalError:
+    pass
+
+try:
+    rt_cursor.execute(
+        """
+        CREATE TABLE seasons (
+            series_url TEXT,
+            season_no INT NOT NULL,
+            image TEXT,
+            tomatometer_score INT,
+            critic_ratings INT NOT NULL,
+            audience_score INT,
+            user_ratings INT NOT NULL,
+            certified BOOLEAN NOT NULL,
+            year INT,
+            FOREIGN KEY(series_url) REFERENCES series(url) ON DELETE CASCADE,
+            UNIQUE(series_url, season_no)
+        )
+    """
+    )
+except sqlite3.OperationalError as e:
     pass
 
 
@@ -184,6 +206,7 @@ def extract_data_from_urls():
     def extract_rt_data(html):
         soup = BeautifulSoup(html, "html.parser")
         name = soup.select("[data-qa='score-panel-series-title']")[0].text.strip()
+        no_seasons = len(soup.select("[data-qa='season-item']"))
         try:
             image = soup.select("[data-qa='poster-image']")[0].get("src")
         except:
@@ -226,6 +249,7 @@ def extract_data_from_urls():
             year=year,
             tomatometer_score=tomatometer_score,
             audience_score=audience_score,
+            no_seasons=no_seasons
         )
 
     async def scrape_url(url, session):
@@ -265,6 +289,7 @@ def extract_data_from_urls():
                 audience_score = (
                     f"{item['audience_score']}" if item["audience_score"] else "NULL"
                 )
+                no_seasons = item["no_seasons"]
                 rt_cursor.execute(
                     f"""
                     INSERT INTO series VALUES (
@@ -275,7 +300,8 @@ def extract_data_from_urls():
                         {network},
                         {year},
                         {tomatometer_score},
-                        {audience_score}
+                        {audience_score},
+                        {no_seasons}
                     )
                 """
                 )
@@ -304,6 +330,157 @@ def extract_data_from_urls():
     asyncio.run(scrape_urls())
 
 
+def scrape_seasons():
+    print("Getting season data from from Rotten Tomatoes...")
+
+    def season_exists(series_url, season_no):
+        rt_cursor.execute(
+            f"""select count(*) from seasons where series_url='{series_url.replace("'","''")}' and season_no={season_no};"""
+        )
+        return rt_cursor.fetchall()[0][0] > 0
+
+    rt_cursor.execute("select url, no_seasons from series;")
+    results = rt_cursor.fetchall()
+    seasons = []
+    for r in results:
+        for i in range(1, r[1]+1):
+            if not season_exists(r[0], i):
+                seasons.append((r[0], i))
+    pbar = tqdm(seasons)
+
+    def extract_rt_data(html):
+        soup = BeautifulSoup(html, "html.parser")
+        try:
+            image = soup.select("[data-qa='poster-image']")[0].get("src")
+        except:
+            image = ""
+        try:
+            year = int(soup.select("[data-qa='season-premiere-date']")[
+                0
+            ].text.split()[-1])
+        except:
+            year = 0
+        try:
+            tomatometer_score = (
+                soup.select("[data-qa='tomatometer']")[0].text.strip().replace("%", "")
+            )
+        except:
+            tomatometer_score = 0
+
+        try:
+            critic_ratings = (
+                soup.select("[data-qa='tomatometer-review-count']")[0].text.strip()
+            )
+        except:
+            critic_ratings = 0
+
+        try:
+            audience_score = (
+                soup.select("[data-qa='audience-score']")[0]
+                .text.strip()
+                .replace("%", "")
+            )
+        except:
+            audience_score = 0
+
+        try:
+            user_ratings = (
+                soup.select("[data-qa='audience-rating-count']")[0].text.strip()
+            ).split(" ")[-1]
+        except:
+            user_ratings = 0
+
+        certified = len(soup.select(".certified-fresh")) > 0
+
+        if tomatometer_score == 0 and audience_score == 0:
+            raise Exception("Missing score")
+
+        return dict(
+            image=image,
+            year=year,
+            tomatometer_score=tomatometer_score,
+            critic_ratings=critic_ratings,
+            audience_score=audience_score,
+            user_ratings=user_ratings,
+            certified=certified,
+        )
+
+    async def scrape_url(urltuple, session):
+        base_url, season_no = urltuple
+        url = f"{base_url}/s{season_no:02}"
+        pbar.set_description(url)
+        try:
+            async with session.get(
+                url, headers={"User-Agent": USER_AGENT}, proxy=proxy
+            ) as response:
+                if response.status == 404:
+                    raise Exception("404")
+                result = await response.text()
+                pbar.update(1)
+                item = None
+                try:
+                    item = extract_rt_data(result)
+                except:
+                    pass
+                if not item:
+                    return
+                image = f"'{item['image']}'" if item["image"] else "NULL"
+                year = item['year'] if item["year"] else "NULL"
+                tomatometer_score = (
+                    item['tomatometer_score']
+                    if item["tomatometer_score"]
+                    else "NULL"
+                )
+                critic_ratings = item['critic_ratings']
+                audience_score = (
+                    item['audience_score']
+                    if item["audience_score"]
+                    else "NULL"
+                )
+                user_ratings = item['user_ratings']
+                certified = (
+                    "1" if item["certified"] else "0"
+                )
+                rt_cursor.execute(
+                    f"""
+                    INSERT INTO seasons VALUES (
+                        '{base_url}',
+                        {season_no},
+                        {image},
+                        {tomatometer_score},
+                        {critic_ratings},
+                        {audience_score},
+                        {user_ratings},
+                        {certified},
+                        {year}
+                    )
+                """
+                )
+                rt_db.commit()
+        except Exception as e:
+            print(url, e)
+
+    async def scrape_urls():
+        async with aiohttp.ClientSession() as client:
+            tasks = []
+            for (url, season_no) in seasons:
+                if season_exists(url, season_no):
+                    continue
+                tasks.append(
+                    asyncio.ensure_future(
+                        scrape_url(
+                            (url,season_no),
+                            client,
+                        )
+                    )
+                )
+                await asyncio.sleep(delay_per_request)
+            await asyncio.gather(*tasks)
+
+    asyncio.run(scrape_urls())
+
+
 if __name__ == "__main__":
     generate_urlmap()
     extract_data_from_urls()
+    scrape_seasons()

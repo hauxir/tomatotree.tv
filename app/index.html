@@ -169,6 +169,11 @@
     border-radius: 50%;
     animation: loadingspin 1s linear infinite;
   }
+
+  .certified {
+      color: #e1ad01 !important;
+      font-weight: 700;
+  }
   
   @keyframes loadingspin {
     100% {
@@ -390,7 +395,8 @@
           }, {
             data: 'year'
           }, {
-            data: 'tomatometer_score'
+            data: 'tomatometer_score',
+            render: (score, _type, row) => (score && row.certified) ? `<div class="certified">${score}</div>` : score
           }, {
             data: 'audience_score'
         }]
