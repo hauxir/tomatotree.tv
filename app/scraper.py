@@ -151,10 +151,10 @@ def generate_urlmap():
                     urlmap_cursor.execute(
                         f"""
                         INSERT INTO urlmap VALUES (
-                            '{show_name}',
-                            '{url}'
+                        ?,?
                         )
-                    """
+                    """,
+                        (show_name, url),
                     )
                     urlmap_db.commit()
                 pbar.update(1)
@@ -190,9 +190,7 @@ def extract_data_from_urls():
         return rt_cursor.fetchall()[0][0] > 0
 
     def delete_last_2_years_of_series():
-        rt_cursor.execute(
-            f"delete from series where year>={LAST_YEAR};"
-        )
+        rt_cursor.execute(f"delete from series where year>={LAST_YEAR};")
 
     urls = []
     urlmap_cursor.execute(f"select url from urlmap")
@@ -249,7 +247,7 @@ def extract_data_from_urls():
             year=year,
             tomatometer_score=tomatometer_score,
             audience_score=audience_score,
-            no_seasons=no_seasons
+            no_seasons=no_seasons,
         )
 
     async def scrape_url(url, session):
@@ -263,8 +261,8 @@ def extract_data_from_urls():
                 item = None
                 try:
                     item = extract_rt_data(result)
-                except:
-                    pass
+                except Exception as e:
+                    print(url, e)
                 if not item:
                     return
                 url = url.replace("'", "''")
@@ -293,17 +291,28 @@ def extract_data_from_urls():
                 rt_cursor.execute(
                     f"""
                     INSERT INTO series VALUES (
-                        '{url}',
-                        {name},
-                        {image},
-                        {genre},
-                        {network},
-                        {year},
-                        {tomatometer_score},
-                        {audience_score},
-                        {no_seasons}
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ? 
                     )
-                """
+                """,
+                    (
+                        url,
+                        name,
+                        image,
+                        genre,
+                        network,
+                        year,
+                        tomatometer_score,
+                        audience_score,
+                        no_seasons,
+                    ),
                 )
                 rt_db.commit()
         except Exception as e:
@@ -326,7 +335,7 @@ def extract_data_from_urls():
                 await asyncio.sleep(delay_per_request)
             await asyncio.gather(*tasks)
 
-    delete_last_2_years_of_series() # So their data gets updated
+    delete_last_2_years_of_series()  # So their data gets updated
     asyncio.run(scrape_urls())
 
 
@@ -343,7 +352,7 @@ def scrape_seasons():
     results = rt_cursor.fetchall()
     seasons = []
     for r in results:
-        for i in range(1, r[1]+1):
+        for i in range(1, r[1] + 1):
             if not season_exists(r[0], i):
                 seasons.append((r[0], i))
     pbar = tqdm(seasons)
@@ -355,9 +364,9 @@ def scrape_seasons():
         except:
             image = ""
         try:
-            year = int(soup.select("[data-qa='season-premiere-date']")[
-                0
-            ].text.split()[-1])
+            year = int(
+                soup.select("[data-qa='season-premiere-date']")[0].text.split()[-1]
+            )
         except:
             year = 0
         try:
@@ -368,9 +377,9 @@ def scrape_seasons():
             tomatometer_score = 0
 
         try:
-            critic_ratings = (
-                soup.select("[data-qa='tomatometer-review-count']")[0].text.strip()
-            )
+            critic_ratings = soup.select("[data-qa='tomatometer-review-count']")[
+                0
+            ].text.strip()
         except:
             critic_ratings = 0
 
@@ -425,36 +434,41 @@ def scrape_seasons():
                 if not item:
                     return
                 image = f"'{item['image']}'" if item["image"] else "NULL"
-                year = item['year'] if item["year"] else "NULL"
+                year = item["year"] if item["year"] else "NULL"
                 tomatometer_score = (
-                    item['tomatometer_score']
-                    if item["tomatometer_score"]
-                    else "NULL"
+                    item["tomatometer_score"] if item["tomatometer_score"] else "NULL"
                 )
-                critic_ratings = item['critic_ratings']
+                critic_ratings = item["critic_ratings"]
                 audience_score = (
-                    item['audience_score']
-                    if item["audience_score"]
-                    else "NULL"
+                    item["audience_score"] if item["audience_score"] else "NULL"
                 )
-                user_ratings = item['user_ratings']
-                certified = (
-                    "1" if item["certified"] else "0"
-                )
+                user_ratings = item["user_ratings"]
+                certified = "1" if item["certified"] else "0"
                 rt_cursor.execute(
                     f"""
                     INSERT INTO seasons VALUES (
-                        '{base_url}',
-                        {season_no},
-                        {image},
-                        {tomatometer_score},
-                        {critic_ratings},
-                        {audience_score},
-                        {user_ratings},
-                        {certified},
-                        {year}
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?
                     )
-                """
+                """,
+                    (
+                        base_url,
+                        season_no,
+                        image,
+                        tomatometer_score,
+                        critic_ratings,
+                        audience_score,
+                        user_ratings,
+                        certified,
+                        year,
+                    ),
                 )
                 rt_db.commit()
         except Exception as e:
@@ -469,7 +483,7 @@ def scrape_seasons():
                 tasks.append(
                     asyncio.ensure_future(
                         scrape_url(
-                            (url,season_no),
+                            (url, season_no),
                             client,
                         )
                     )
