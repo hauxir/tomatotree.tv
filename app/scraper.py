@@ -85,7 +85,7 @@ except sqlite3.OperationalError as e:
 
 def generate_urlmap():
     def map_exists(show_name):
-        urlmap_cursor.execute(f"select count(*) from urlmap where name='{show_name}';")
+        urlmap_cursor.execute("select count(*) from urlmap where name=?;",(show_name,))
         results = urlmap_cursor.fetchall()[0][0] > 0
         return results
 
@@ -126,7 +126,7 @@ def generate_urlmap():
         soup = BeautifulSoup(page.content, "html.parser")
         links = soup.select(".cont a")
         for link in links:
-            show_name = link.text.replace("'", "")
+            show_name = link.text
             if not map_exists(show_name):
                 show_names.append(show_name)
 
@@ -147,9 +147,9 @@ def generate_urlmap():
                 items = tvs.get("items")
                 if len(items) > 0:
                     item = items[0]
-                    url = item["url"].replace("'", "''")
+                    url = item["url"]
                     urlmap_cursor.execute(
-                        f"""
+                        """
                         INSERT INTO urlmap VALUES (
                         ?,?
                         )
@@ -159,7 +159,7 @@ def generate_urlmap():
                     urlmap_db.commit()
                 pbar.update(1)
         except Exception as e:
-            print(show_name, url, e)
+            print(show_name, url, e, flush=True)
 
     async def get_urls():
         async with aiohttp.ClientSession() as client:
@@ -185,15 +185,16 @@ def extract_data_from_urls():
 
     def url_exists(url):
         rt_cursor.execute(
-            f"""select count(*) from series where url='{url.replace("'","''")}';"""
+            "select count(*) from series where url=?;",
+            (url,)
         )
         return rt_cursor.fetchall()[0][0] > 0
 
     def delete_last_2_years_of_series():
-        rt_cursor.execute(f"delete from series where year>={LAST_YEAR};")
+        rt_cursor.execute("delete from series where year>=?;", (LAST_YEAR,))
 
     urls = []
-    urlmap_cursor.execute(f"select url from urlmap")
+    urlmap_cursor.execute("select url from urlmap")
     results = urlmap_cursor.fetchall()
     for r in results:
         urls.append(r[0])
@@ -262,34 +263,20 @@ def extract_data_from_urls():
                 try:
                     item = extract_rt_data(result)
                 except Exception as e:
-                    print(url, e)
+                    print(url, e, flush=True)
                 if not item:
                     return
-                url = url.replace("'", "''")
-                name = (
-                    f"""'{item['name'].replace("'","''")}'"""
-                    if item["name"]
-                    else "NULL"
-                )
-                image = f"'{item['image']}'" if item["image"] else "NULL"
-                genre = f"'{item['genre']}'" if item["genre"] else "NULL"
-                network = (
-                    f"""'{item['network'].replace("'","''")}'"""
-                    if item["network"]
-                    else "NULL"
-                )
-                year = f"{item['year']}" if item["year"] else "NULL"
-                tomatometer_score = (
-                    f"{item['tomatometer_score']}"
-                    if item["tomatometer_score"]
-                    else "NULL"
-                )
-                audience_score = (
-                    f"{item['audience_score']}" if item["audience_score"] else "NULL"
-                )
+                url = url
+                name = item["name"]
+                image = item['image']
+                genre = item['genre']
+                network = item['network']
+                year = item['year']
+                tomatometer_score = item['tomatometer_score']
+                audience_score = item['audience_score']
                 no_seasons = item["no_seasons"]
                 rt_cursor.execute(
-                    f"""
+                    """
                     INSERT INTO series VALUES (
                         ?,
                         ?,
@@ -312,11 +299,11 @@ def extract_data_from_urls():
                         tomatometer_score,
                         audience_score,
                         no_seasons,
-                    ),
+                    )
                 )
                 rt_db.commit()
         except Exception as e:
-            print(url, e)
+            print(url, e, flush=True)
 
     async def scrape_urls():
         async with aiohttp.ClientSession() as client:
@@ -344,7 +331,8 @@ def scrape_seasons():
 
     def season_exists(series_url, season_no):
         rt_cursor.execute(
-            f"""select count(*) from seasons where series_url='{series_url.replace("'","''")}' and season_no={season_no};"""
+            "select count(*) from seasons where series_url=? and season_no=?;",
+            (series_url, season_no)
         )
         return rt_cursor.fetchall()[0][0] > 0
 
@@ -429,23 +417,19 @@ def scrape_seasons():
                 item = None
                 try:
                     item = extract_rt_data(result)
-                except:
-                    pass
+                except Exception as e:
+                    print(url, e, flush=True)
                 if not item:
                     return
-                image = f"'{item['image']}'" if item["image"] else "NULL"
-                year = item["year"] if item["year"] else "NULL"
-                tomatometer_score = (
-                    item["tomatometer_score"] if item["tomatometer_score"] else "NULL"
-                )
+                image = item['image']
+                year = item["year"]
+                tomatometer_score = item["tomatometer_score"]
                 critic_ratings = item["critic_ratings"]
-                audience_score = (
-                    item["audience_score"] if item["audience_score"] else "NULL"
-                )
+                audience_score = item["audience_score"]
                 user_ratings = item["user_ratings"]
-                certified = "1" if item["certified"] else "0"
+                certified = item["certified"]
                 rt_cursor.execute(
-                    f"""
+                    """
                     INSERT INTO seasons VALUES (
                         ?,
                         ?,
@@ -472,7 +456,7 @@ def scrape_seasons():
                 )
                 rt_db.commit()
         except Exception as e:
-            print(url, e)
+            print(url, e, flush=True)
 
     async def scrape_urls():
         async with aiohttp.ClientSession() as client:
