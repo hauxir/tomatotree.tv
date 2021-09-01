@@ -396,7 +396,7 @@
             data: 'year'
           }, {
             data: 'tomatometer_score',
-            render: (score, _type, row) => (score && row.certified) ? `<div class="certified">${score}</div>` : score
+            render: (score, type, row) => (score && row.certified && ["type","sort"].indexOf(type) === -1) ? `<div class="certified">${score}</div>` : score
           }, {
             data: 'audience_score'
         }]
@@ -405,6 +405,7 @@
       function render() {
         const minYear = $("#minYear").val();
         const maxYear = $("#maxYear").val();
+        const order = datatable.order();
         if (maxYear !== $("#minYear").prop("max")) {
           $('#minYear').prop('max', maxYear);
           $('#minYear').change();
@@ -431,6 +432,7 @@
         });
         datatable.clear();
         datatable.rows.add(results);
+        datatable.order(order);
         datatable.draw();
       };
       
