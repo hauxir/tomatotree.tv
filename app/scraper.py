@@ -159,7 +159,7 @@ def generate_urlmap():
                     urlmap_db.commit()
                 pbar.update(1)
         except Exception as e:
-            print(show_name, url, e, flush=True)
+            pbar.set_description(f"{show_name}, {url}: {e}")
 
     async def get_urls():
         async with aiohttp.ClientSession() as client:
@@ -185,13 +185,10 @@ def extract_data_from_urls():
 
     def url_exists(url):
         rt_cursor.execute(
-            "select count(*) from series where url=?;",
-            (url,)
+            "select count(*) from series where url=? and year < ?;",
+            (url, LAST_YEAR)
         )
         return rt_cursor.fetchall()[0][0] > 0
-
-    def delete_last_2_years_of_series():
-        rt_cursor.execute("delete from series where year>=?;", (LAST_YEAR,))
 
     urls = []
     urlmap_cursor.execute("select url from urlmap")
@@ -263,7 +260,7 @@ def extract_data_from_urls():
                 try:
                     item = extract_rt_data(result)
                 except Exception as e:
-                    print(url, e, flush=True)
+                    pbar.set_description(f"{url}: {e}")
                 if not item:
                     return
                 url = url
@@ -277,7 +274,7 @@ def extract_data_from_urls():
                 no_seasons = item["no_seasons"]
                 rt_cursor.execute(
                     """
-                    INSERT INTO series VALUES (
+                    INSERT OR REPLACE INTO series VALUES (
                         ?,
                         ?,
                         ?,
@@ -303,7 +300,7 @@ def extract_data_from_urls():
                 )
                 rt_db.commit()
         except Exception as e:
-            print(url, e, flush=True)
+            pbar.set_description(f"{url}: {e}")
 
     async def scrape_urls():
         async with aiohttp.ClientSession() as client:
@@ -322,7 +319,6 @@ def extract_data_from_urls():
                 await asyncio.sleep(delay_per_request)
             await asyncio.gather(*tasks)
 
-    delete_last_2_years_of_series()  # So their data gets updated
     asyncio.run(scrape_urls())
 
 
@@ -331,8 +327,8 @@ def scrape_seasons():
 
     def season_exists(series_url, season_no):
         rt_cursor.execute(
-            "select count(*) from seasons where series_url=? and season_no=?;",
-            (series_url, season_no)
+            "select count(*) from seasons where series_url=? and season_no=? and year < ?;",
+            (series_url, season_no, CURRENT_YEAR-1)
         )
         return rt_cursor.fetchall()[0][0] > 0
 
@@ -418,7 +414,7 @@ def scrape_seasons():
                 try:
                     item = extract_rt_data(result)
                 except Exception as e:
-                    print(url, e, flush=True)
+                    pbar.set_description(f"{url}: {e}")
                 if not item:
                     return
                 image = item['image']
@@ -430,7 +426,7 @@ def scrape_seasons():
                 certified = item["certified"]
                 rt_cursor.execute(
                     """
-                    INSERT INTO seasons VALUES (
+                    INSERT OR REPLACE INTO seasons VALUES (
                         ?,
                         ?,
                         ?,
@@ -456,7 +452,7 @@ def scrape_seasons():
                 )
                 rt_db.commit()
         except Exception as e:
-            print(url, e, flush=True)
+            pbar.set_description(f"{url}: {e}")
 
     async def scrape_urls():
         async with aiohttp.ClientSession() as client:
