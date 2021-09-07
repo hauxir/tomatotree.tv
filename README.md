@@ -8,6 +8,7 @@ server will be running on port 81
 
 
 ## Scrape data
+Recommended to use a proxy service such as [brightdata](https://brightdata.com/)
 ````
 bash scrape.sh <HTTP_PROXY_URL:optional>
 ````
