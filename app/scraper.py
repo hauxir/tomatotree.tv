@@ -235,8 +235,8 @@ def extract_data_from_urls():
             )
         except:
             audience_score = 0
-        if tomatometer_score == 0 and audience_score == 0:
-            raise Exception("Missing score")
+        #if tomatometer_score == 0 and audience_score == 0:
+        #    raise Exception("Missing score")
         return dict(
             name=name,
             image=image,
@@ -254,6 +254,9 @@ def extract_data_from_urls():
             async with session.get(
                 url, headers={"User-Agent": USER_AGENT}, proxy=proxy
             ) as response:
+                if response.status == 404:
+                    pbar.set_description("404")
+                    return
                 result = await response.text()
                 pbar.update(1)
                 item = None
@@ -320,9 +323,10 @@ def extract_data_from_urls():
             await asyncio.gather(*tasks)
 
     asyncio.run(scrape_urls())
+    return urls
 
 
-def scrape_seasons():
+def scrape_seasons(urls):
     print("Getting season data from from Rotten Tomatoes...")
 
     def season_exists(series_url, season_no):
@@ -334,6 +338,7 @@ def scrape_seasons():
 
     rt_cursor.execute("select url, no_seasons from series;")
     results = rt_cursor.fetchall()
+    results = [r for r in results if r[0] in urls]
     seasons = []
     for r in results:
         for i in range(1, r[1] + 1):
@@ -385,8 +390,8 @@ def scrape_seasons():
 
         certified = len(soup.select(".certified-fresh")) > 0
 
-        if tomatometer_score == 0 and audience_score == 0:
-            raise Exception("Missing score")
+        #if tomatometer_score == 0 and audience_score == 0:
+        #    raise Exception("Missing score")
 
         return dict(
             image=image,
@@ -407,7 +412,8 @@ def scrape_seasons():
                 url, headers={"User-Agent": USER_AGENT}, proxy=proxy
             ) as response:
                 if response.status == 404:
-                    raise Exception("404")
+                    pbar.set_description("404")
+                    return
                 result = await response.text()
                 pbar.update(1)
                 item = None
@@ -476,5 +482,5 @@ def scrape_seasons():
 
 if __name__ == "__main__":
     generate_urlmap()
-    extract_data_from_urls()
-    scrape_seasons()
+    urls = extract_data_from_urls()
+    scrape_seasons(urls)
