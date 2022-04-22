@@ -237,6 +237,10 @@ def extract_data_from_urls():
             audience_score = 0
         #if tomatometer_score == 0 and audience_score == 0:
         #    raise Exception("Missing score")
+
+        if year == 0:
+            raise Exception("Missing year")
+
         return dict(
             name=name,
             image=image,
@@ -392,6 +396,9 @@ def scrape_seasons(urls):
 
         #if tomatometer_score == 0 and audience_score == 0:
         #    raise Exception("Missing score")
+
+        if year == 0:
+            raise Exception("Missing year")
 
         return dict(
             image=image,

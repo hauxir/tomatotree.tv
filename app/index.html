@@ -338,7 +338,7 @@
     
     $(document).ready(function() {
 
-      const defaultGenres = ["Drama", "Comedy"];
+      const defaultGenres = [];
     
       const data = {{data | safe}};
       
@@ -461,7 +461,8 @@
       datatable.order(
       [
         [3, "desc"],
-        [5, "desc"]
+        [5, "desc"],
+        [4, "desc"]
       ]
       );
       datatable.draw();
