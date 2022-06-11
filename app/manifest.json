@@ -1,0 +1,11 @@
+{
+  "name": "Tomatotree.tv",
+  "short_name": "Tomatotree.tv",
+  "description": "Find your next TV Series!",
+  "theme_color": "#003300",
+  "background_color": "#ffffff",
+  "display": "minimal-ui",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/"
+}
