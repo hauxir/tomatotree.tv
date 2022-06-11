@@ -25,7 +25,7 @@
     overflow-x: hidden;
     overflow-y: auto;
   }
-  
+
   h1 {
     color: #fff;
     font-weight: 400;
@@ -34,7 +34,7 @@
     font-family: Fascinate Inline;
     margin-bottom: -10px;
   }
-  
+
   h2 {
     color: #fff;
     margin: auto;
@@ -42,12 +42,12 @@
     margin-bottom: 20px;
     font-weight: 400;
   }
-  
+
   form {
     display: flex;
     flex-direction: column;
   }
-  
+
   .root {
     display: flex;
     flex-direction: column;
@@ -56,28 +56,28 @@
     margin: 0 auto;
     max-width: 800px;
   }
-  
+
   .form-row {
     display: flex;
     flex-direction: row;
     position: relative;
   }
-  
+
   .form-row > * {
     position: relative;
   }
-  
+
   .select-wrapper {
     flex: 1;
     display: flex;
     margin: 10px 0px;
     padding: 0px 5px;
   }
-  
+
   .select2-container {
     flex: 1;
   }
-  
+
   .select2-selection {
     min-height: 40px !important;
     display: flex !important;
@@ -105,12 +105,12 @@
     .select2-results__option--selected{
       background-color: #000 !important;
   }
-  
+
   .results {
     flex: 1;
     background-color: rgb(32, 32, 32);
   }
-  
+
   #logo {
     background-color: #fa320a;
     padding: 10px;
@@ -118,12 +118,12 @@
     margin: auto;
     margin-bottom: 10px;
   }
-  
+
   table.dataTable {
     margin-top: 0px !important;
     width: 100% !important;
   }
-  
+
   th {
     top: 0;
     color: black;
@@ -131,11 +131,11 @@
     text-align: left !important;
     padding: 5px;
   }
-  
+
   td {
     min-width: 50px;
   }
-  
+
   .range-wrap {
     position: relative;
     margin: 0 auto 3rem;
@@ -148,7 +148,7 @@
     border-radius: 5px;
     text-align: center;
   }
-  
+
   .range {
     width: 100%;
   }
@@ -174,7 +174,7 @@
     top: -1px;
     left: 50%;
   }
-  
+
   .loader {
     position: absolute;
     left: 0;
@@ -196,7 +196,7 @@
       color: #e1ad01 !important;
       font-weight: 700;
   }
-  
+
   @keyframes loadingspin {
     100% {
       transform: rotate(360deg)
@@ -311,25 +311,36 @@
       </div>
     </div>
     </div>
-  
+
     <script>
-    
+
+    window.data = {{data | safe}};
+
     $(document).ready(function() {
 
-      const defaultGenres = [];
-    
-      const data = {{data | safe}};
-      
+      const search = new window.URLSearchParams(window.location.search);
+      const urlState = Object.fromEntries(search.entries());
+
       const firstYear = Math.min(...data.map(item => item.year).filter(y => y > 0));
       const lastYear = Math.max(...data.map(item => item.year).filter(y => y > 0));
-      
+
+      const defaultGenres = urlState.genres ? urlState.genres.split(',') : [];
+      const defaultNetworks = urlState.networks ? urlState.networks.split(',') : [];
+      const defaultMinYear = urlState.minYear ? urlState.minYear : lastYear - 2;
+      const defaultMaxYear = urlState.maxYear ? urlState.maxYear : lastYear;
+      const defaultMinTomatoMeter = urlState.minTomatoMeter ? urlState.minTomatoMeter : 70;
+      const defaultMinAudience = urlState.minAudience ? urlState.minAudience : 70;
+
       $('#minYear, #maxYear').prop('min', firstYear);
       $('#minYear, #maxYear').prop('max', lastYear);
-      $('#minYear').val(lastYear - 2);
-      $('#maxYear').val(lastYear);
+      $('#minYear').val(defaultMinYear);
+      $('#maxYear').val(defaultMaxYear);
+
+      $('#tomatometer_score').val(defaultMinTomatoMeter);
+      $('#audience_score').val(defaultMinAudience);
 
       const genres = [];
-      
+
       [...new Set(data.map(item => item.genre))].sort().forEach(genre => {
 	if(!genre) return;
 	genre.replace(" & ", ",").split(",").forEach(genre => {
@@ -344,20 +355,24 @@
           }
           $("#genre").append(option);
       });
-      
+
       $('#genre').select2({
         placeholder: "Genre"
       });
-      
+
       [...new Set(data.map(item => item.network))].sort().forEach(network => {
 	if(!network) return;
-        $("#network").append(new Option(network, network));
+        const option = new Option(network, network);
+        if (defaultNetworks.indexOf(network) !== -1) {
+          option.selected = true;
+        }
+        $("#network").append(option);
       });
-      
+
       $('#network').select2({
         placeholder: "Network"
       });
-      
+
       const datatable = $("table").DataTable({
         paging: false,
         searching: false,
@@ -379,7 +394,24 @@
             data: 'audience_score'
         }]
       });
-      
+
+      datatable.on('order', function ( e, diff, edit ) {
+        updateUrl({ order: datatable.order() });
+      });
+
+      function updateUrl(currentState) {
+        const search = new window.URLSearchParams(window.location.search);
+        Object.entries(currentState).forEach(([key, value]) => {
+          search.set(key, value);
+        });
+        const url = new URL(window.location.href);
+        url.search = '?' + search.toString();
+
+        const path = url.toString();
+
+        window.history.replaceState({ path }, document.title, path);
+      }
+
       function render() {
         const minYear = $("#minYear").val();
         const maxYear = $("#maxYear").val();
@@ -396,6 +428,7 @@
         const minAudience = $("#audience_score").val();
         const genres = $("#genre").val();
         const networks = $("#network").val();
+        updateUrl({ minYear, maxYear, minTomatoMeter, minAudience, genres, networks, order });
         const results = data.filter(r => {
           const matchesGenres = genres.length > 0 ? genres.find(genre => r.genre && r.genre.indexOf(genre) !== -1) !== undefined : true;
           const matchesNetworks = networks.length > 0 ? networks.find(network=> r.network && r.network.indexOf(network) !== -1) !== undefined : true;
@@ -413,7 +446,7 @@
         datatable.order(order);
         datatable.draw();
       };
-      
+
       $(".range-wrap").each(function() {
         function setrangeBubble(range, rangeBubble) {
           const val = range.value;
@@ -423,7 +456,7 @@
           rangeBubble.innerHTML = val;
           rangeBubble.style.left = `calc(${newVal}% + (${8 - newVal * 0.15}px))`;
         }
-      
+
         const range = $(this).find("[type='range']")[0];
         const rangeBubble = $(this).find(".rangeBubble")[0];
         $(range).on("change input", () => {
@@ -431,25 +464,27 @@
         });
         setrangeBubble(range, rangeBubble);
       });
-      
+
       $("#minYear, #maxYear, #tomatometer_score, #audience_score, #genre, #network").on("change", render);
-      
+
       render();
-      
+
       datatable.order(
-      [
-        [3, "desc"],
-        [5, "desc"],
-        [4, "desc"]
-      ]
+        urlState.order
+        ? urlState.order.split(',')
+        : [
+          [3, "desc"],
+          [5, "desc"],
+          [4, "desc"]
+        ]
       );
       datatable.draw();
-      
+
       $(".container").show();
       $(".loader").remove();
-    
+
     })
-    
+
     </script>
   </body>
 </html>
