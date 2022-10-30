@@ -133,30 +133,34 @@ def generate_urlmap():
     pbar = tqdm(show_names)
 
     async def get_url(show_name, session):
-        pbar.set_description(show_name)
         url = (
-            "https://www.rottentomatoes.com/napi/search/all?type=tv&searchQuery="
+            "https://www.rottentomatoes.com/search?search="
             + urllib.parse.quote(show_name)
         )
         try:
             async with session.get(
-                url, headers={"User-Agent": USER_AGENT}, proxy=proxy
+                url, headers={"User-Agent": USER_AGENT}, proxy=proxy, raise_for_status=True
             ) as response:
-                result = await response.json()
-                tvs = result.get("tv")
-                items = tvs.get("items")
-                if len(items) > 0:
-                    item = items[0]
-                    url = item["url"]
-                    urlmap_cursor.execute(
-                        """
-                        INSERT INTO urlmap VALUES (
-                        ?,?
+                html = await response.text()
+                soup = BeautifulSoup(html, features="html.parser")
+                tv = soup.find("search-page-result", dict(type='tv'))
+                if not tv:
+                    raise("No results found")
+                items = [dict(url=a['href'],title=a.contents[0].strip()) for a in tv.findAll("a", {"data-qa" : "info-name"})]
+                for item in items:
+                    url = item.get("url")
+                    title = item.get("title")
+                    pbar.set_description(title)
+                    if not map_exists(title):
+                        urlmap_cursor.execute(
+                            """
+                            INSERT INTO urlmap VALUES (
+                            ?,?
+                            )
+                        """,
+                            (title, url),
                         )
-                    """,
-                        (show_name, url),
-                    )
-                    urlmap_db.commit()
+                urlmap_db.commit()
                 pbar.update(1)
         except Exception as e:
             pbar.set_description(f"{show_name}, {url}: {e}")
@@ -270,7 +274,7 @@ def extract_data_from_urls():
                     pbar.set_description(f"{url}: {e}")
                 if not item:
                     return
-                url = url
+                url = url.replace("https://rottentomates.com","https://www.rottentomatoes.com")
                 name = item["name"]
                 image = item['image']
                 genre = item['genre']
