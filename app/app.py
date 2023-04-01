@@ -1,14 +1,26 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
+from flask_caching import Cache
 import json
 import sqlite3
 
+config = {
+    "DEBUG": True,
+    "CACHE_TYPE": "SimpleCache",
+    "CACHE_DEFAULT_TIMEOUT": 300
+}
+
 app = Flask(__name__, template_folder=".")
+app.config.from_mapping(config)
+app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
+
+cache = Cache(app)
 
 MIN_VOTES = 20
 
 
-@app.route("/")
-def index():
+@app.route("/data.json")
+@cache.cached()
+def data():
     rt_db = sqlite3.connect("rt.db")
     rt_cursor = rt_db.cursor()
     rt_cursor.execute(
@@ -43,8 +55,15 @@ def index():
         if item["user_ratings"] < MIN_VOTES:
             item["audience_score"] = None
         data.append(item)
-    return render_template("index.html", data=json.dumps(data))
+    rt_cursor.close()
+    return jsonify(data=data)
+
+
+@app.route("/")
+@cache.cached()
+def index():
+    return render_template("index.html")
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=81)
+    app.run(host="0.0.0.0", port=81, threaded=True)

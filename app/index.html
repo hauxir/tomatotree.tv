@@ -314,11 +314,13 @@
   
     <script>
     
-    $(document).ready(function() {
+    $(document).ready(async function() {
 
       const defaultGenres = [];
     
-      const data = {{data | safe}};
+      const dataResp = await fetch("/data.json");
+      const dataJson = await dataResp.json();
+      const data = dataJson.data;
       
       const firstYear = Math.min(...data.map(item => item.year).filter(y => y > 0));
       const lastYear = Math.max(...data.map(item => item.year).filter(y => y > 0));

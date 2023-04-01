@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 from yarl import URL
 
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
 
 CURRENT_YEAR = datetime.date.today().year
 LAST_YEAR = CURRENT_YEAR - 1
@@ -139,13 +139,13 @@ def generate_urlmap():
         )
         try:
             async with session.get(
-                url, headers={"User-Agent": USER_AGENT}, proxy=proxy, raise_for_status=True
+                url, headers={}, proxy=proxy, raise_for_status=True
             ) as response:
                 html = await response.text()
                 soup = BeautifulSoup(html, features="html.parser")
-                tv = soup.find("search-page-result", dict(type='tv'))
+                tv = soup.find("search-page-result", dict(type='tvSeries'))
                 if not tv:
-                    raise("No results found")
+                    raise Exception("No results found")
                 items = [dict(url=a['href'],title=a.contents[0].strip()) for a in tv.findAll("a", {"data-qa" : "info-name"})]
                 for item in items:
                     url = item.get("url")
