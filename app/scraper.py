@@ -1,7 +1,9 @@
 import datetime
-import sys
 import json
+import re
 import sqlite3
+import sys
+import traceback
 import urllib
 
 import aiohttp
@@ -12,7 +14,16 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 from yarl import URL
 
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
+from random_user_agent.user_agent import UserAgent
+from random_user_agent.params import SoftwareName, OperatingSystem
+
+
+def user_agent():
+    software_names = [SoftwareName.CHROME.value]
+    operating_systems = [OperatingSystem.WINDOWS.value]
+    user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100)
+    return user_agent_rotator.get_random_user_agent()
+
 
 CURRENT_YEAR = datetime.date.today().year
 LAST_YEAR = CURRENT_YEAR - 1
@@ -81,6 +92,10 @@ try:
     )
 except sqlite3.OperationalError as e:
     pass
+
+
+def only_numbers(s):
+    return re.sub(r'[^0-9]', '', s)
 
 
 def generate_urlmap():
@@ -205,42 +220,42 @@ def extract_data_from_urls():
 
     def extract_rt_data(html):
         soup = BeautifulSoup(html, "html.parser")
-        name = soup.select("[data-qa='score-panel-series-title']")[0].text.strip()
+        name = soup.select("h1")[0].contents[0].strip()
         no_seasons = len(soup.select("[data-qa='season-item']"))
         try:
             image = soup.select("[data-qa='poster-image']")[0].get("src")
         except:
             image = ""
         try:
-            genre = soup.select("[data-qa='series-details-genre']")[0].text.strip()
+            genre = soup.select('b:contains("Genre: ")')[
+                0
+            ].find_next_siblings()[0].text
         except:
             genre = ""
         try:
-            network = soup.select("[data-qa='series-details-network']")[0].text.strip()
+            network = soup.select('b:contains("TV Network: ")')[
+                0
+            ].find_next_siblings()[0].text
         except:
             network = ""
         try:
-            year = soup.select("[data-qa='series-details-premiere-date']")[
+            year = soup.select('b:contains("Premiere Date: ")')[
                 0
-            ].text.split()[-1]
-        except:
+            ].find_next_siblings()[0].text.split()[-1]
+        except Exception as e:
             year = 0
         try:
-            tomatometer_score = (
-                soup.select("[data-qa='tomatometer']")[0].text.strip().replace("%", "")
-            )
+            scoreboard = soup.select("score-board")[0]
+            tomatometer_score = scoreboard.get("tomatometerscore") or 0
         except:
             tomatometer_score = 0
         try:
-            audience_score = (
-                soup.select("[data-qa='audience-score']")[0]
-                .text.strip()
-                .replace("%", "")
-            )
+            scoreboard = soup.select("score-board")[0]
+            audience_score = scoreboard.get("audiencescore") or 0
         except:
             audience_score = 0
-        #if tomatometer_score == 0 and audience_score == 0:
-        #    raise Exception("Missing score")
+        if tomatometer_score == 0 and audience_score == 0:
+            raise Exception("Missing score")
 
         if year == 0:
             raise Exception("Missing year")
@@ -260,10 +275,14 @@ def extract_data_from_urls():
         pbar.set_description(url)
         try:
             async with session.get(
-                url, headers={"User-Agent": USER_AGENT}, proxy=proxy
+                url, headers={"User-Agent": user_agent()},
+                proxy=proxy
             ) as response:
                 if response.status == 404:
                     pbar.set_description("404")
+                    return
+                if response.status == 403:
+                    pbar.set_description("403")
                     return
                 result = await response.text()
                 pbar.update(1)
@@ -361,45 +380,43 @@ def scrape_seasons(urls):
         except:
             image = ""
         try:
-            year = int(
-                soup.select("[data-qa='season-premiere-date']")[0].text.split()[-1]
-            )
+            year = soup.select('b:contains("Premiere Date:")')[
+                0
+            ].find_next_siblings()[0].text.split()[-1]
         except:
             year = 0
         try:
-            tomatometer_score = (
-                soup.select("[data-qa='tomatometer']")[0].text.strip().replace("%", "")
-            )
+            scoreboard = soup.select("score-board")[0]
+            tomatometer_score = scoreboard.get("tomatometerscore") or 0
         except:
             tomatometer_score = 0
 
         try:
-            critic_ratings = soup.select("[data-qa='tomatometer-review-count']")[
+            critic_ratings = only_numbers(
+                soup.select("[data-qa='tomatometer-review-count']")[
                 0
-            ].text.strip()
+                ].text.strip()
+            )
         except:
             critic_ratings = 0
 
         try:
-            audience_score = (
-                soup.select("[data-qa='audience-score']")[0]
-                .text.strip()
-                .replace("%", "")
-            )
+            scoreboard = soup.select("score-board")[0]
+            audience_score = scoreboard.get("audiencescore") or 0
         except:
             audience_score = 0
 
         try:
-            user_ratings = (
+            user_ratings = only_numbers(
                 soup.select("[data-qa='audience-rating-count']")[0].text.strip()
-            ).split(" ")[-1]
+            )
         except:
             user_ratings = 0
 
-        certified = len(soup.select(".certified-fresh")) > 0
+        certified = len(soup.select(("[state='certified-fresh']"))) > 0
 
-        #if tomatometer_score == 0 and audience_score == 0:
-        #    raise Exception("Missing score")
+        if tomatometer_score == 0 and audience_score == 0:
+            raise Exception("Missing score")
 
         if year == 0:
             raise Exception("Missing year")
@@ -420,10 +437,13 @@ def scrape_seasons(urls):
         pbar.set_description(url)
         try:
             async with session.get(
-                url, headers={"User-Agent": USER_AGENT}, proxy=proxy
+                url, headers={"User-Agent": user_agent()}, proxy=proxy
             ) as response:
                 if response.status == 404:
                     pbar.set_description("404")
+                    return
+                if response.status == 403:
+                    pbar.set_description("403")
                     return
                 result = await response.text()
                 pbar.update(1)
